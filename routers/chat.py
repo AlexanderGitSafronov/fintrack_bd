@@ -122,7 +122,7 @@ def _date_range(period: str):
     return str(today), str(today)
 
 
-def execute_tool(name: str, args: dict, user_id: int, db: Session) -> str:
+def execute_tool(name: str, args: dict, user_id: int, db: Session, currency: str = "UAH") -> str:
 
     if name == "list_categories":
         cats = db.query(models.Category).filter(models.Category.user_id == user_id).all()
@@ -156,7 +156,7 @@ def execute_tool(name: str, args: dict, user_id: int, db: Session) -> str:
             models.Expense.date >= date_from,
             models.Expense.date <= date_to,
         ).scalar() or 0
-        return json.dumps({"period": period, "total": round(total, 2), "transactions": count}, ensure_ascii=False)
+        return json.dumps({"period": period, "total": round(total, 2), "transactions": count, "currency": currency}, ensure_ascii=False)
 
     if name == "list_expenses":
         limit        = min(int(args.get("limit", 10)), 20)
@@ -182,6 +182,7 @@ def execute_tool(name: str, args: dict, user_id: int, db: Session) -> str:
             result.append({
                 "id": e.id, "date": e.date, "amount": e.amount,
                 "description": e.description, "category": cat_name,
+                "currency": currency,
             })
         return json.dumps(result, ensure_ascii=False)
 
@@ -199,11 +200,6 @@ def execute_tool(name: str, args: dict, user_id: int, db: Session) -> str:
             ).first()
             if cat:
                 category_id = cat.id
-
-        settings = db.query(models.UserSettings).filter(
-            models.UserSettings.user_id == user_id
-        ).first()
-        currency = settings.currency if settings else "USD"
 
         exp = models.Expense(
             user_id=user_id, amount=amount, description=description,
@@ -258,7 +254,8 @@ Rules:
 - Always respond in the SAME LANGUAGE the user writes in
 - Be concise — short, clear answers
 - When adding an expense, confirm what you added (amount, description, category, date)
-- Format amounts with 2 decimal places and the appropriate currency symbol
+- Format amounts with 2 decimal places and the user's currency: {currency}
+- ALWAYS use the currency code {currency} when displaying any monetary amounts — never use a different currency
 - Today's date is {today}
 - When the user asks about "today", "this week", "this month" — use the corresponding period
 """
@@ -278,7 +275,17 @@ async def chat(
 
     client = OpenAI(api_key=api_key)
 
-    system_msg = SYSTEM_PROMPT.replace("{today}", str(date.today()))
+    # Fetch user's currency setting
+    settings = db.query(models.UserSettings).filter(
+        models.UserSettings.user_id == current_user.id
+    ).first()
+    user_currency = settings.currency if settings else "UAH"
+
+    system_msg = (
+        SYSTEM_PROMPT
+        .replace("{today}", str(date.today()))
+        .replace("{currency}", user_currency)
+    )
     messages = [{"role": "system", "content": system_msg}]
     messages += [{"role": m.role, "content": m.content} for m in req.messages]
 
@@ -302,7 +309,7 @@ async def chat(
 
         for tc in msg.tool_calls:
             args   = json.loads(tc.function.arguments)
-            result = execute_tool(tc.function.name, args, current_user.id, db)
+            result = execute_tool(tc.function.name, args, current_user.id, db, user_currency)
 
             messages.append({
                 "role":         "tool",
