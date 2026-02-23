@@ -1,4 +1,3 @@
-import os
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -22,13 +21,10 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-# CORS — reads ALLOWED_ORIGINS from env (comma-separated), falls back to "*"
-_raw_origins = os.getenv("ALLOWED_ORIGINS", "*")
-_origins = [o.strip() for o in _raw_origins.split(",")] if _raw_origins != "*" else ["*"]
-
+# CORS — allow all origins (API is protected by JWT tokens)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
