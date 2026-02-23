@@ -9,6 +9,7 @@ from routers import auth as auth_router
 from routers import categories as categories_router
 from routers import expenses as expenses_router
 from routers import settings as settings_router
+from routers import chat as chat_router
 
 # Create all DB tables on startup
 Base.metadata.create_all(bind=engine)
@@ -35,6 +36,7 @@ app.include_router(auth_router.router)
 app.include_router(categories_router.router)
 app.include_router(expenses_router.router)
 app.include_router(settings_router.router)
+app.include_router(chat_router.router)
 
 
 # ─────────────────────────── ROOT / HEALTH ───────────────────────────
