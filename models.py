@@ -40,7 +40,7 @@ class Expense(Base):
     user_id     = Column(Integer, ForeignKey("users.id"), nullable=False)
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
     amount      = Column(Float, nullable=False)
-    currency    = Column(String, default="RUB")
+    currency    = Column(String, default="UAH")
     description = Column(String, nullable=False)
     date        = Column(String, nullable=False)   # YYYY-MM-DD
     created_at  = Column(DateTime, default=datetime.utcnow)
@@ -54,8 +54,8 @@ class UserSettings(Base):
 
     id       = Column(Integer, primary_key=True, index=True)
     user_id  = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
-    currency = Column(String, default="RUB")
-    lang     = Column(String, default="ru")
+    currency = Column(String, default="UAH")
+    lang     = Column(String, default="uk")
     theme    = Column(String, default="light")
 
     user = relationship("User", back_populates="settings")
